@@ -1,11 +1,8 @@
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import io.searchbox.client.JestClient;
+import io.searchbox.core.Index;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-
 import java.io.*;
 import java.util.ResourceBundle;
 
@@ -14,39 +11,34 @@ public class Json2ES {
     public static void main(String[] args) throws IOException, ParseException {
         // Reading properties from config.properties
         ResourceBundle rb = ResourceBundle.getBundle("config");
+
+        System.out.println("Fetching index and type name from property file");
         String indexName = rb.getString("indexName");
         String typeName = rb.getString("typeName");
 
+        System.out.println("Creating connection using jest client with ESClient utils");
+        JestClient jestClient = ESClientUtils.getClient();
+        System.out.println("Creating object of xml2json class");
         Xml2Json xml2Json = new Xml2Json();
         String s = xml2Json.getJSON();
 
-        System.out.println("json :" +xml2Json.getJSON());
-        System.out.println("String s :" + s);
-
         JSONObject jsonObject1 = new JSONObject(s);
         JSONObject parts = jsonObject1.getJSONObject("PARTS");
-        System.out.println("PARTS :" + parts);
         JSONArray part = parts.getJSONArray("PART");
-        System.out.println("Part :" + part );
 
-        for (int i =1 ; i< part.length();i++){
-            System.out.println(part.get(i));
-            JSONObject item = part.getJSONObject(i);
-            System.out.println(item.get("ITEM"));
+       for (int i =1 ; i< part.length();i++) {
+           JSONObject item = part.getJSONObject(i);
+            PART source = new PART();
+            source.setCOST(String.valueOf(item.get("COST")));
+            source.setITEM(String.valueOf(item.get("ITEM")));
+            source.setMANUFACTURER(String.valueOf(item.get("MANUFACTURER")));
+            source.setMODEL(String.valueOf(item.get("MODEL")));
+
+            // Inserting data in Elastic Search
+            Index index = new Index.Builder(source).index(indexName).type(typeName).id(String.valueOf(i)).build();
+            jestClient.execute(index);
         }
 
-
-
-        //JSONParser parser = new JSONParser();
-        //JSONObject jsonObject = (JSONObject) parser.parse(s);
-        //Object obj = parser.parse(s);
-        //System.out.println(obj);
-        //JSONArray array = (JSONArray)jsonObject.get("PARTS");
-        //System.out.println(array);
-
-      /*  String pageName = s.getJSONObject("PARTS").getString("PART");
-        System.out.println(pageName);
-*/
 
         // Creating JestClient object using ESClientUtils
         /*JestClient jestClient = ESClientUtils.getClient();
